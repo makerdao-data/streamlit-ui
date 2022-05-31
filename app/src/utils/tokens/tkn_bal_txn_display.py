@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import dateutil
+from dateutil.relativedelta import relativedelta
 from datetime import datetime
 
 def tkn_bal_txn_display(topic: str) -> tuple: 
