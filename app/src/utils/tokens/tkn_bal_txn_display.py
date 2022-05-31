@@ -50,6 +50,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                     min_value=start_date
                 )
                 
+                # Query conditionals
                 if len(date_input) == 2:
                     if (date_input[1] - date_input[0]) < timedelta(days=60):
                         if st.button('Query'):
@@ -58,8 +59,9 @@ def tkn_bal_txn_display(topic: str) -> tuple:
 
             # If 'Block' is selected...
             if indexer == 'Block':
-
+                
                 # Block inputs
+                st.write("Maximum block range: 60,000.")
                 start_block_input = st.number_input(
                     'Select start block:',
                     value=12000000
@@ -69,8 +71,11 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                     value=15000000
                 )
 
-                if st.button('Query'):
-                    # Return tuple of selected token and block parameters
-                    return (topic, token, (start_block_input, end_block_input))
+                # Query conditionals
+                if start_block_input < end_block_input:
+                    if (end_block_input - start_block_input) < 60000:
+                        if st.button('Query'):
+                            # Return tuple of selected token and block parameters
+                            return (topic, token, (start_block_input, end_block_input))
         
      
