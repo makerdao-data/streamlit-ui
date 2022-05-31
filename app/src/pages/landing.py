@@ -2,7 +2,7 @@ import streamlit as st
 
 def app():
     """
-    Landing page
+    Landing Page
     """
     
     # Page title and description
