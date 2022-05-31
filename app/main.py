@@ -15,6 +15,5 @@ app.add_page("Token Balances", balances.app)
 def main():
     app.run()
 
-
 if __name__ == "__main__":
     main()
