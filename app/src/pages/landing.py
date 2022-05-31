@@ -13,4 +13,4 @@ def app():
     st.markdown("On the left hand sidebar, you can navigate to the transfers and balances sections.")
 
     st.markdown("The data is sourced from the Data Insights CU database. We will soon release the data through more channels, including API and Snowflake Marketplace. Feel free to contact us via [Discord](https://discord.gg/83YgvH2D) or the [Forum](https://forum.makerdao.com/).")
-    st.image('src/utils/images/screenshot.png')
+    # st.image('src/utils/images/screenshot.png') FileNotFound
