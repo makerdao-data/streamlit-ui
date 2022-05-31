@@ -31,16 +31,22 @@ def tkn_bal_txn_display(topic: str) -> tuple:
 
             # If 'Date' is selected...
             if indexer == 'Date':
-                
+
+                # Min date selection
+                if token == 'DAI':
+                    start_date = datetime(2019, 11, 18)
+                elif token == 'MKR':
+                    start_date = datetime(2017, 11, 25)
+
                 # Date input with date range
                 date_input = st.date_input(
                     'Select date range:',
                     value=(
-                        datetime(2019, 1, 1),
+                        start_date,
                         datetime.today()
                     ),
                     max_value=datetime.today(),
-                    min_value=datetime(2019, 1, 1)
+                    min_value=start_date
                 )
                 
                 if len(date_input) == 2:

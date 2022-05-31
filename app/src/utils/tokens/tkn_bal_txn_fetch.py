@@ -21,8 +21,6 @@ def tkn_bal_txn_fetch(topic: str, token: str, params: tuple) -> pd.DataFrame:
     assert token in ('MKR', 'DAI')
     assert type(params[0]) == type(params[1])
     assert type(params[0]) in (date, int)
-
-    # Query formatting #
     
     # Table selection
     if topic == 'txs':

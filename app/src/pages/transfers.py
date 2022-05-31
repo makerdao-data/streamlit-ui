@@ -21,6 +21,11 @@ def app():
         # Generate query from parameters and fetch data
         df = tkn_bal_txn_fetch(*query_params)
         
+        # Stop and prompt re-querying if result dataframe is empty.
+        if df.empty:
+            st.write('No results. Requery with new parameters.')
+            st.stop()
+
         # Generate analysis metrics
         metrics = txn_analyzoor(df)
 
@@ -58,7 +63,7 @@ def app():
             with st.container():
                 # Display graph/chart visualizations within container
                 st.markdown("Graph of daily transaction volume")
-                st.line_chart(
+                st.bar_chart(
                     pd.DataFrame(
                         list(metrics[4].items()), 
                         columns=['Date','Transaction Volume']).set_index('Date')
@@ -66,7 +71,7 @@ def app():
 
             with st.container():
                 st.markdown("Graph of daily transaction quantity")
-                st.line_chart(
+                st.bar_chart(
                     pd.DataFrame(
                         list(metrics[5].items()), 
                         columns=['Date','Transaction Quantity']).set_index('Date')

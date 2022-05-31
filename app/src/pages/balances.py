@@ -19,6 +19,11 @@ def app():
         # Generate query from parameters and fetch data
         df = tkn_bal_txn_fetch(*query_params)
 
+        # Stop and prompt re-querying if result dataframe is empty.
+        if df.empty:
+            st.write('No results. Requery with new parameters.')
+            st.stop()
+
         # Display result KPIs
         with st.expander("Result KPIs", expanded=True):
             with st.container():
