@@ -20,12 +20,12 @@ def app():
 
         # Generate query from parameters and fetch data
         df = tkn_bal_txn_fetch(*query_params)
-
+        
         # Generate analysis metrics
         metrics = txn_analyzoor(df)
 
         # Display result KPIs
-        with st.expander("Result KPIs"):
+        with st.expander("Result KPIs", expanded=True):
             # Display metrics in vertical columns
             with st.container():
                 # Create columns
@@ -47,14 +47,14 @@ def app():
                     st.metric(label=f"Average Daily TX Volume (in {query_params[1]})", value=round(metrics[3], 4))
 
         # Display table visualizations
-        with st.expander("Result Tables"):
+        with st.expander("Result Tables", expanded=True):
             with st.container():
                 # Display dataframe tables within container
                 st.markdown(f"Top 10 Transfers by {query_params[1]}")
                 st.dataframe(df.nlargest(10, 'AMOUNT').reset_index(drop=True))
 
         # Display result visualizations
-        with st.expander("Result Visualizations"):
+        with st.expander("Result Visualizations", expanded=True):
             with st.container():
                 # Display graph/chart visualizations within container
                 st.markdown("Graph of daily transaction volume")
@@ -81,12 +81,9 @@ def txn_analyzoor(df: pd.DataFrame) -> tuple:
         df (pd.DataFrame): DataFrame of raw txn data.
     """
 
-    # Format df
-    df.TIMESTAMP = df.TIMESTAMP.apply(lambda x: x.date())
-
     # Get count of unique dates
-    unique_dates = len(df.TIMESTAMP.unique())
-
+    unique_dates = len(df.TIMESTAMP.apply(lambda x: x.date()).unique())
+    
     # Transaction quantity
     txquant_total = len(df)
     txquant_daily_avg = txquant_total / unique_dates
@@ -96,13 +93,11 @@ def txn_analyzoor(df: pd.DataFrame) -> tuple:
     txvol_daily_avg = txvol_total / unique_dates
 
     # Get dictionary of daily transaction volume
-    txvol_daily = {}
-    for timestamp in df.TIMESTAMP.unique():
-        txvol_daily[timestamp] = sum(df[df.TIMESTAMP == timestamp].AMOUNT)
-     
+    txvol_daily_df = df.resample('D', on='TIMESTAMP').sum().reset_index().drop(columns='BLOCK')
+    txvol_daily = dict(zip(txvol_daily_df.TIMESTAMP, txvol_daily_df.AMOUNT))
+    
     # Get dictionary of daily transaction amount
-    txsum_daily = {}
-    for timestamp in df.TIMESTAMP.unique():
-        txsum_daily[timestamp] = len(df[df.TIMESTAMP == timestamp])
+    txsum_daily_df = df[['TIMESTAMP', 'AMOUNT']].resample('D', on='TIMESTAMP').count().drop(columns='TIMESTAMP').reset_index()
+    txsum_daily =  dict(zip(txsum_daily_df.TIMESTAMP, txsum_daily_df.AMOUNT))
 
     return txquant_total, txquant_daily_avg, txvol_total, txvol_daily_avg, txvol_daily, txsum_daily

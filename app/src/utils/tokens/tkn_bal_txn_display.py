@@ -19,7 +19,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
 
     # Once token is selected...
     if token:
-        with st.expander("Query parameters"):
+        with st.expander("Query parameters", expanded=True):
             # Negate block indexing for balance explorations
             if topic is not 'bal':
                 opts = ('Date', 'Block')
@@ -44,7 +44,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 )
                 
                 if len(date_input) == 2:
-                    if st.button('Submit query'):
+                    if st.button('Query'):
                         # Return tuple of selected token and date parameters
                         return (topic, token, date_input)
 
@@ -61,7 +61,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                     value=15000000
                 )
 
-                if st.button('Submit query'):
+                if st.button('Query'):
                     # Return tuple of selected token and block parameters
                     return (topic, token, (start_block_input, end_block_input))
         

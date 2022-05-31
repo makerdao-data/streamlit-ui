@@ -20,13 +20,13 @@ def app():
         df = tkn_bal_txn_fetch(*query_params)
 
         # Display result KPIs
-        with st.expander("Result KPIs"):
+        with st.expander("Result KPIs", expanded=True):
             with st.container():
                 # Display metrics within container
                 st.metric(label="Unique holders", value=len(df.ADDRESS.unique()))
 
         # Display result table visualizations
-        with st.expander("Result Tables"):
+        with st.expander("Result Tables", expanded=True):
             with st.container():
                 # Display dataframe tables within container
                 st.markdown(f"Top 50 {query_params[1]} holders")

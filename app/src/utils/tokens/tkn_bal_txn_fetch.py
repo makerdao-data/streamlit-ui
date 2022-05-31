@@ -26,7 +26,7 @@ def tkn_bal_txn_fetch(topic: str, token: str, params: tuple) -> pd.DataFrame:
     
     # Table selection
     if topic == 'txs':
-        table = f'timestamp, tx_hash, sender, receiver, amount from maker.history.{token}_transfers'
+        table = f'timestamp, block, tx_hash, sender, receiver, amount from maker.history.{token}_transfers'
     elif topic == 'bal':
         table = f'date, address, balance from maker.balances.{token}'
 

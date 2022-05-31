@@ -4,6 +4,8 @@ from src.pages import landing
 from src.pages import transfers
 from src.pages import balances
 
+st.set_page_config(layout="wide") 
+
 # Initializing app class
 app = MakerView()
 
