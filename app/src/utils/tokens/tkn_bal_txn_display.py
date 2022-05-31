@@ -43,7 +43,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 date_input = st.date_input(
                     'Select date range:',
                     value=(
-                        (datetime.today() - relativedelta(weeks==1)).date(),
+                        (datetime.today() - relativedelta(weeks=1)).date(),
                         datetime.today()
                     ),
                     max_value=datetime.today(),
