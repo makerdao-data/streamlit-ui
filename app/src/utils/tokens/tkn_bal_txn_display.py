@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import dateutil
 from datetime import datetime
 
 def tkn_bal_txn_display(topic: str) -> tuple: 
@@ -42,7 +43,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 date_input = st.date_input(
                     'Select date range:',
                     value=(
-                        start_date,
+                        (datetime.today() - relativedelta(years=1)).date(),
                         datetime.today()
                     ),
                     max_value=datetime.today(),
