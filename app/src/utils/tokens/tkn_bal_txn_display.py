@@ -36,12 +36,14 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 # Min date selection
                 if token == 'DAI':
                     start_date = datetime(2019, 11, 18)
+                    max_delta = 20
                 elif token == 'MKR':
                     start_date = datetime(2017, 11, 25)
+                    max_delta = 50
 
                 # Date input with date range
                 date_input = st.date_input(
-                    'Select date range (2 month maximum):',
+                    f'Select date range ({max_delta} day maximum):',
                     value=(
                         (datetime.today() - relativedelta(weeks=1)).date(),
                         datetime.today()
@@ -52,7 +54,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 
                 # Query conditionals
                 if len(date_input) == 2:
-                    if (date_input[1] - date_input[0]) < timedelta(days=60):
+                    if (date_input[1] - date_input[0]) < timedelta(days=max_delta):
                         if st.button('Query'):
                             # Return tuple of selected token and date parameters
                             return (topic, token, date_input)
