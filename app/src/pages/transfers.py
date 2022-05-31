@@ -37,19 +37,19 @@ def app():
                 quant_col1, quant_col2 = st.columns(2)
 
                 with quant_col1:
-                    st.metric(label="Total TX Quantity", value='{:,}'.format(metrics[0]))
+                    st.metric(label="Total Transaction Quantity", value='{:,}'.format(metrics[0]))
                 
                 with quant_col2:
-                    st.metric(label="Average Daily TX Quantity", value='{:,}'.format(round(metrics[1])))
+                    st.metric(label="Average Daily Transaction Quantity", value='{:,}'.format(round(metrics[1])))
 
             with st.container():
                 vol_col1, vol_col2 = st.columns(2)
 
                 with vol_col1:
-                    st.metric(label=f"Total TX Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[2], 2)))
+                    st.metric(label=f"Total Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[2], 2)))
 
                 with vol_col2:
-                    st.metric(label=f"Average Daily TX Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[3], 2)))
+                    st.metric(label=f"Average Daily Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[3], 2)))
 
         # Display result visualizations
         with st.expander("Result Visualizations", expanded=True):
