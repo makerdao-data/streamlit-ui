@@ -28,7 +28,7 @@ def app():
         with st.expander("Result KPIs", expanded=True):
             with st.container():
                 # Display metrics within container
-                st.metric(label="Unique holders", value=len(df.ADDRESS.unique()))
+                st.metric(label="Unique holders", value='{:,}'.format(len(df.ADDRESS.unique())))
 
         # Display result table visualizations
         with st.expander("Result Tables", expanded=True):

@@ -37,31 +37,24 @@ def app():
                 quant_col1, quant_col2 = st.columns(2)
 
                 with quant_col1:
-                    st.metric(label="Total TX Quantity", value=metrics[0])
+                    st.metric(label="Total TX Quantity", value='{:,}'.format(metrics[0]))
                 
                 with quant_col2:
-                    st.metric(label="Average Daily TX Quantity", value=round(metrics[1]))
+                    st.metric(label="Average Daily TX Quantity", value='{:,}'.format(round(metrics[1])))
 
             with st.container():
                 vol_col1, vol_col2 = st.columns(2)
 
                 with vol_col1:
-                    st.metric(label=f"Total TX Volume (in {query_params[1]})", value=round(metrics[2], 4))
+                    st.metric(label=f"Total TX Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[2], 2)))
 
                 with vol_col2:
-                    st.metric(label=f"Average Daily TX Volume (in {query_params[1]})", value=round(metrics[3], 4))
-
-        # Display table visualizations
-        with st.expander("Result Tables", expanded=True):
-            with st.container():
-                # Display dataframe tables within container
-                st.markdown(f"Top 10 Transfers by {query_params[1]}")
-                st.dataframe(df.nlargest(10, 'AMOUNT').reset_index(drop=True))
+                    st.metric(label=f"Average Daily TX Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[3], 2)))
 
         # Display result visualizations
         with st.expander("Result Visualizations", expanded=True):
             with st.container():
-                # Display graph/chart visualizations within container
+                # Display graph/chart visualizations wihin container
                 st.markdown("Graph of daily transaction volume")
                 st.bar_chart(
                     pd.DataFrame(
@@ -77,6 +70,12 @@ def app():
                         columns=['Date','Transaction Quantity']).set_index('Date')
                 )
 
+        # Display table visualizations
+        with st.expander("Result Tables", expanded=True):
+            with st.container():
+                # Display dataframe tables within container
+                st.markdown(f"Top 10 Transfers by {query_params[1]}")
+                st.dataframe(df.nlargest(10, 'AMOUNT').reset_index(drop=True))
 
 def txn_analyzoor(df: pd.DataFrame) -> tuple:
     """

@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from dateutil.relativedelta import relativedelta
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def tkn_bal_txn_display(topic: str) -> tuple: 
     """
@@ -22,7 +22,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
     if token:
         with st.expander("Query parameters", expanded=True):
             # Negate block indexing for balance explorations
-            if topic is not 'bal':
+            if topic != 'bal':
                 opts = ('Date', 'Block')
             else:
                 opts = ['Date']
@@ -41,7 +41,7 @@ def tkn_bal_txn_display(topic: str) -> tuple:
 
                 # Date input with date range
                 date_input = st.date_input(
-                    'Select date range:',
+                    'Select date range (2 month maximum):',
                     value=(
                         (datetime.today() - relativedelta(weeks=1)).date(),
                         datetime.today()
@@ -51,9 +51,10 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 )
                 
                 if len(date_input) == 2:
-                    if st.button('Query'):
-                        # Return tuple of selected token and date parameters
-                        return (topic, token, date_input)
+                    if (date_input[1] - date_input[0]) < timedelta(days=60):
+                        if st.button('Query'):
+                            # Return tuple of selected token and date parameters
+                            return (topic, token, date_input)
 
             # If 'Block' is selected...
             if indexer == 'Block':
