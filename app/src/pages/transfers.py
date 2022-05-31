@@ -57,7 +57,7 @@ def app():
         with st.expander("Result Visualizations"):
             with st.container():
                 # Display graph/chart visualizations within container
-                st.markdown(f"Graph of daily transaction volume (in {query_params[1]})")
+                st.markdown("Graph of daily transaction volume")
                 st.line_chart(
                     pd.DataFrame(
                         list(metrics[4].items()), 
@@ -65,7 +65,7 @@ def app():
                 )
 
             with st.container():
-                st.markdown(f"Graph of daily transaction quantity (in {query_params[1]})")
+                st.markdown("Graph of daily transaction quantity")
                 st.line_chart(
                     pd.DataFrame(
                         list(metrics[5].items()), 
