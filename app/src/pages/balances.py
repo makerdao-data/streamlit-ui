@@ -1,6 +1,6 @@
 import streamlit as st
 from ..utils.tokens.tkn_bal_txn_display import tkn_bal_txn_display
-from ..utils.tokens.tkn_bal_txn_fetch import tkn_bal_txn_fetch
+from ..utils.tokens.tkn_bal_txn_fetch import fetch_data
 
 def app():
     """
@@ -17,7 +17,7 @@ def app():
     if query_params:
 
         # Generate query from parameters and fetch data
-        df = tkn_bal_txn_fetch(*query_params)
+        df = fetch_data(*query_params)
 
         # Stop and prompt re-querying if result dataframe is empty.
         if df.empty:

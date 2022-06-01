@@ -2,9 +2,14 @@ import pandas as pd
 import streamlit as st
 import pandas as pd
 from datetime import date
-from ...config.sf import engine
+import snowflake.connector
+# from ...config.sf import engine
+from ...config.sf import SNOWFLAKE_ACCOUNT, SNOWFLAKE_HOST, SNOWFLAKE_PASSWORD, SNOWFLAKE_ROLE, SNOWFLAKE_USERNAME, SNOWFLAKE_WAREHOUSE
 
-def tkn_bal_txn_fetch(topic: str, token: str, params: tuple) -> pd.DataFrame:
+
+
+@st.experimental_memo(ttl=600)
+def fetch_data(topic: str, token: str, params: tuple) -> pd.DataFrame:
     """
     Function to generate query and fetch results from query parameters
 
@@ -24,7 +29,7 @@ def tkn_bal_txn_fetch(topic: str, token: str, params: tuple) -> pd.DataFrame:
     
     # Table selection
     if topic == 'txs':
-        table = f'timestamp, block, tx_hash, sender, receiver, amount from maker.history.{token}_transfers'
+        table = f'timestamp, block, tx_hash, sender, receiver, amount from maker.transfers.{token}'
     elif topic == 'bal':
         table = f'date, address, balance from maker.balances.{token}'
 
@@ -35,11 +40,38 @@ def tkn_bal_txn_fetch(topic: str, token: str, params: tuple) -> pd.DataFrame:
             date_col = 'date(TIMESTAMP)'
         else:
             date_col = 'date'
-        cond = f"where {date_col} > '{params[0]}' and {date_col} < '{params[1]}'"
+        cond = f"where {date_col} >= '{params[0]}' and {date_col} <= '{params[1]}'"
     elif type(params[0]) == int:
-        cond = f"where block > {params[0]} and block < {params[1]}"
+        cond = f"where block >= {params[0]} and block <= {params[1]}"
 
+    @st.experimental_singleton
+    def init_connection():
+        print()
+        print('Initializing DB connection...')
+        print()
+        return snowflake.connector.connect(
+            account=SNOWFLAKE_HOST,
+            user=SNOWFLAKE_USERNAME,
+            password=SNOWFLAKE_PASSWORD,
+            warehouse=SNOWFLAKE_WAREHOUSE,
+            role=SNOWFLAKE_ROLE,
+            port=443,
+            protocol='https'
+        )
+
+    engine = init_connection()
     # Construct final query and fetch result
-    result = pd.read_sql(f"select {table} {cond}", engine)
+    try:
+        print()
+        print('Fetching data...')
+        print()
+        result = pd.read_sql(f"select {table} {cond}", engine)
+    except Exception as e:
+        print()
+        print(f"""Fetching data failed. Error: {e}""")
+        print('Reinitializing DB connection...')
+        print()
+        engine = init_connection()
+        result = pd.read_sql(f"select {table} {cond}", engine)
 
     return result
