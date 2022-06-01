@@ -29,7 +29,7 @@ def fetch_data(topic: str, token: str, params: tuple) -> pd.DataFrame:
     
     # Table selection
     if topic == 'txs':
-        table = f'timestamp, block, tx_hash, sender, receiver, amount from maker.history.{token}_transfers'
+        table = f'timestamp, block, tx_hash, sender, receiver, amount from maker.transfers.{token}'
     elif topic == 'bal':
         table = f'date, address, balance from maker.balances.{token}'
 
@@ -40,9 +40,9 @@ def fetch_data(topic: str, token: str, params: tuple) -> pd.DataFrame:
             date_col = 'date(TIMESTAMP)'
         else:
             date_col = 'date'
-        cond = f"where {date_col} > '{params[0]}' and {date_col} < '{params[1]}'"
+        cond = f"where {date_col} >= '{params[0]}' and {date_col} <= '{params[1]}'"
     elif type(params[0]) == int:
-        cond = f"where block > {params[0]} and block < {params[1]}"
+        cond = f"where block >= {params[0]} and block <= {params[1]}"
 
     @st.experimental_singleton
     def init_connection():
