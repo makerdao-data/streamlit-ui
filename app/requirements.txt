@@ -3,3 +3,4 @@ snowflake==0.0.3
 streamlit==1.9.2
 snowflake-connector-python
 python-dateutil
+python_dotenv
