@@ -22,12 +22,12 @@ def app():
     if query_params:
 
         # Generate query from parameters and fetch data
-        df = fetch_data(*query_params)
+        # df = fetch_data(*query_params)
         
-        # Stop and prompt re-querying if result dataframe is empty.
-        if df.empty:
-            st.write('No results. Requery with new parameters.')
-            st.stop()
+        # # Stop and prompt re-querying if result dataframe is empty.
+        # if df.empty:
+        #     st.write('No results. Requery with new parameters.')
+        #     st.stop()
 
         # # Generate analysis metrics
 
@@ -48,62 +48,84 @@ def app():
 
         engine = init_connection()
         
-        ttq = engine.cursor().execute(f"""
+        ttq_query = f"""
             SELECT count(*)
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}';
-            """).fetchone()[0]
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_ttq(ttq_query):
+            return engine.cursor().execute(ttq_query).fetchone()[0]
 
-        adtq = engine.cursor().execute(f"""
+        adtq_query = f"""
             select avg(sum_transfers)
             from (SELECT date(timestamp), count(*) sum_transfers
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}'
             group by  date(timestamp));
-        """).fetchone()[0]
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_adtq(adtq_query):
+            return engine.cursor().execute(adtq_query).fetchone()[0]
 
-        ttv = engine.cursor().execute(f"""
+        ttv_query = f"""
             SELECT sum(amount)
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}';
-        """).fetchone()[0]
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_ttv(ttv_query):
+            return engine.cursor().execute(ttv_query).fetchone()[0]
 
-        adtv = engine.cursor().execute(f"""
+        adtv_query = f"""
             select avg(sum_amount)
             from (SELECT date(timestamp), sum(amount) sum_amount
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}'
             group by  date(timestamp));
-        """).fetchone()[0]
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_adtv(adtv_query):
+            return engine.cursor().execute(adtv_query).fetchone()[0]
 
-        tv = engine.cursor().execute(f"""
+        tv_query = f"""
             select timestamp, amount
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}'
             order by timestamp;
-        """).fetchall()
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_tv(tv_query):
+            return engine.cursor().execute(tv_query).fetchall()
 
-        tv = engine.cursor().execute(f"""
-            select timestamp, amount
-            FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
-            order by timestamp;
-        """).fetchall()
-
-        tq = engine.cursor().execute(f"""
+        tq_query = f"""
             select timestamp, count(*)
             FROM maker.transfers.{query_params[1]}
             where date(timestamp) >= '{query_params[2][0]}'
             and date(timestamp) <= '{query_params[2][1]}'
             group by timestamp
             order by timestamp;
-        """).fetchall()
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_tq(tq_query):
+            return engine.cursor().execute(tq_query).fetchall()
+
+        top_10_query = f"""
+            select timestamp, block, tx_hash, sender, receiver, amount
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            order by amount desc
+            limit 10;
+        """
+        @st.experimental_memo(ttl=600)
+        def fetch_top_10(top_10_query):
+            return engine.cursor().execute(top_10_query).fetchall()
 
         # Display result KPIs
         with st.expander("Result KPIs", expanded=True):
@@ -114,19 +136,19 @@ def app():
                 quant_col1, quant_col2 = st.columns(2)
 
                 with quant_col1:
-                    st.metric(label="Total Transaction Quantity", value='{:,}'.format(ttq))
+                    st.metric(label="Total Transaction Quantity", value='{:,}'.format(fetch_ttq(ttq_query)))
                 
                 with quant_col2:
-                    st.metric(label="Average Daily Transaction Quantity", value='{:,}'.format(round(adtq)))
+                    st.metric(label="Average Daily Transaction Quantity", value='{:,}'.format(round(fetch_adtq(adtq_query))))
 
             with st.container():
                 vol_col1, vol_col2 = st.columns(2)
 
                 with vol_col1:
-                    st.metric(label=f"Total Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(ttv, 2)))
+                    st.metric(label=f"Total Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(fetch_ttv(ttv_query), 2)))
 
                 with vol_col2:
-                    st.metric(label=f"Average Daily Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(adtv, 2)))
+                    st.metric(label=f"Average Daily Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(fetch_adtv(adtv_query), 2)))
 
         # Display result visualizations
         with st.expander("Result Visualizations", expanded=True):
@@ -135,7 +157,7 @@ def app():
                 st.markdown("Graph of daily transaction volume")
                 st.bar_chart(
                     pd.DataFrame(
-                        tv, 
+                        fetch_tv(tv_query), 
                         columns=['Date','Transaction Volume']).set_index('Date')
                 )
 
@@ -143,7 +165,7 @@ def app():
                 st.markdown("Graph of daily transaction quantity")
                 st.bar_chart(
                     pd.DataFrame(
-                        tq, 
+                        fetch_tq(tq_query), 
                         columns=['Date','Transaction Quantity']).set_index('Date')
                 )
 
@@ -152,4 +174,9 @@ def app():
             with st.container():
                 # Display dataframe tables within container
                 st.markdown(f"Top 10 Transfers by {query_params[1]}")
-                st.dataframe(df.nlargest(10, 'AMOUNT').reset_index(drop=True))
+                st.dataframe(
+                    pd.DataFrame(
+                        fetch_top_10(top_10_query),
+                        columns=['Timestamp', 'Block', 'Tx_hash', 'Sender', 'Receiver', 'Amount']
+                    )
+                )

@@ -35,11 +35,16 @@ def app():
             )
 
         engine = init_connection()
-        holders = engine.cursor().execute(f"""
-            select count(distinct address)
-            from maker.balances.{query_params[1]}
-            where date >= '{query_params[2][0]}' and date <= '{query_params[2][1]}';
-            """).fetchone()[0]
+
+        @st.experimental_memo(ttl=600)
+        def fetch_holders():
+            return engine.cursor().execute(f"""
+                select count(distinct address)
+                from maker.balances.{query_params[1]}
+                where date >= '{query_params[2][0]}' and date <= '{query_params[2][1]}';
+                """).fetchone()[0]
+        
+        holders = fetch_holders()
 
         # Display result KPIs
         with st.expander("Result KPIs", expanded=True):
@@ -48,13 +53,17 @@ def app():
                 # st.metric(label="Unique holders", value='{:,}'.format(len(df.ADDRESS.unique())))
                 st.metric(label="Unique holders", value='{:,}'.format(holders))
 
-        top_holders = engine.cursor().execute(f"""
-            select address, balance
-            from maker.balances.{query_params[1]}
-            where date = (select max(date) from maker.balances.{query_params[1]} where date <= '{query_params[2][1]}')
-            order by balance desc
-            limit 50;
-        """).fetchall()
+        @st.experimental_memo(ttl=600)
+        def fetch_top_holders():
+            return engine.cursor().execute(f"""
+                select address, balance
+                from maker.balances.{query_params[1]}
+                where date = (select max(date) from maker.balances.{query_params[1]} where date <= '{query_params[2][1]}')
+                order by balance desc
+                limit 50;
+            """).fetchall()
+        
+        top_holders = fetch_top_holders()
 
         df = pd.DataFrame(top_holders)
 
