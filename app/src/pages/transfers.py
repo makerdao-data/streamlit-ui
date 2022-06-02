@@ -154,19 +154,26 @@ def app():
             with st.container():
                 # Display graph/chart visualizations wihin container
                 st.markdown("Graph of daily transaction volume")
-                st.bar_chart(
-                    pd.DataFrame(
-                        fetch_tv(tv_query), 
-                        columns=['Date','Transaction Volume']).set_index('Date')
-                )
+
+                def render_viz_1(tv_query):
+                    st.bar_chart(
+                        pd.DataFrame(
+                            fetch_tv(tv_query), 
+                            columns=['Date','Transaction Volume']).set_index('Date')
+                    )
+                
+                render_viz_1(tv_query)
 
             with st.container():
                 st.markdown("Graph of daily transaction quantity")
-                st.bar_chart(
-                    pd.DataFrame(
-                        fetch_tq(tq_query), 
-                        columns=['Date','Transaction Quantity']).set_index('Date')
-                )
+                def render_viz_2(tq_query):
+                    st.bar_chart(
+                        pd.DataFrame(
+                            fetch_tq(tq_query), 
+                            columns=['Date','Transaction Quantity']).set_index('Date')
+                    )
+                
+                render_viz_2(tq_query)
 
         # Display table visualizations
         with st.expander("Result Tables", expanded=True):
