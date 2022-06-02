@@ -55,40 +55,40 @@ def tkn_bal_txn_display(topic: str) -> tuple:
                 # Min date selection
                 if token == 'DAI':
 
-                    max_date_query = f"""
-                        SELECT max(date(timestamp))
+                    min_max_date_query = f"""
+                        SELECT min(date(timestamp)), max(date(timestamp))
                         FROM maker.transfers.{token};
                     """
                     @st.experimental_memo(ttl=600)
-                    def fetch_max_date(max_date_query):
-                        return engine.cursor().execute(max_date_query).fetchone()[0]
+                    def fetch_min_max_date(min_max_date_query):
+                        return engine.cursor().execute(min_max_date_query).fetchone()
 
-                    max_value = fetch_max_date(max_date_query)
-                    min_value = max_value - timedelta(days=30)
+                    values_range = fetch_min_max_date(min_max_date_query)
+                    min_value = values_range[1] - timedelta(days=30)
                     max_delta = 30
 
                 elif token == 'MKR':
 
-                    max_date_query = f"""
-                        SELECT max(date(timestamp))
+                    min_max_date_query = f"""
+                        SELECT min(date(timestamp)), max(date(timestamp))
                         FROM maker.transfers.{token};
                     """
                     @st.experimental_memo(ttl=600)
-                    def fetch_max_date(max_date_query):
-                        return engine.cursor().execute(max_date_query).fetchone()[0]
+                    def fetch_min_max_date(min_max_date_query):
+                        return engine.cursor().execute(min_max_date_query).fetchone()
 
-                    max_value = fetch_max_date(max_date_query)
-                    min_value = max_value - timedelta(days=30)
+                    values_range = fetch_min_max_date(min_max_date_query)
+                    min_value = values_range[1] - timedelta(days=30)
                     max_delta = 30
 
                 # Date input with date range
                 date_input = st.date_input(
                     f'Select date range ({max_delta} day maximum):',
                     value=(
-                        (min_value, max_value)
+                        (min_value, values_range[1])
                     ),
-                    max_value=max_value,
-                    min_value=min_value
+                    max_value=values_range[1],
+                    min_value=values_range[0]
                 )
                 
                 # Query conditionals
@@ -101,25 +101,29 @@ def tkn_bal_txn_display(topic: str) -> tuple:
             # If 'Block' is selected...
             if indexer == 'Block':
 
-                max_block_query = f"""
-                    SELECT max(block)
+                min_max_block_query = f"""
+                    SELECT min(block), max(block)
                     FROM maker.transfers.{token};
                 """
                 @st.experimental_memo(ttl=600)
                 def fetch_max_block(max_block_query):
-                    return engine.cursor().execute(max_block_query).fetchone()[0]
+                    return engine.cursor().execute(max_block_query).fetchone()
                 
-                max_value = fetch_max_block(max_block_query)
+                values_range = fetch_max_block(min_max_block_query)
 
                 # Block inputs
                 st.write("Maximum block range: 150,000.")
                 start_block_input = st.number_input(
                     'Select start block:',
-                    value = max_value - 150000
+                    value = values_range[1] - 150000,
+                    min_value = values_range[0],
+                    max_value = values_range[1] 
                 )
                 end_block_input = st.number_input(
                     'Select end block:',
-                    value = max_value
+                    value = values_range[1],
+                    min_value = values_range[0],
+                    max_value = values_range[1]
                 )
 
                 # Query conditionals

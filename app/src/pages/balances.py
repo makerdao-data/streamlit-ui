@@ -36,32 +36,33 @@ def app():
 
         engine = init_connection()
 
+        holders_query = f"""
+            select count(distinct address)
+            from maker.balances.{query_params[1]}
+            where date >= '{query_params[2][0]}' and date <= '{query_params[2][1]}';
+        """
+
         @st.experimental_memo(ttl=600)
-        def fetch_holders():
-            return engine.cursor().execute(f"""
-                select count(distinct address)
-                from maker.balances.{query_params[1]}
-                where date >= '{query_params[2][0]}' and date <= '{query_params[2][1]}';
-                """).fetchone()[0]
-        
-        holders = fetch_holders()
+        def fetch_holders(holders_query):
+            return engine.cursor().execute(holders_query).fetchone()[0]
 
         # Display result KPIs
         with st.expander("Result KPIs", expanded=True):
             with st.container():
                 # Display metrics within container
                 # st.metric(label="Unique holders", value='{:,}'.format(len(df.ADDRESS.unique())))
-                st.metric(label="Unique holders", value='{:,}'.format(holders))
+                st.metric(label="Unique holders", value='{:,}'.format(fetch_holders(holders_query)))
 
+        top_50_query = f"""
+            select address, balance
+            from maker.balances.{query_params[1]}
+            where date = (select max(date) from maker.balances.{query_params[1]} where date <= '{query_params[2][1]}')
+            order by balance desc
+            limit 50;
+        """
         @st.experimental_memo(ttl=600)
-        def fetch_top_holders():
-            return engine.cursor().execute(f"""
-                select address, balance
-                from maker.balances.{query_params[1]}
-                where date = (select max(date) from maker.balances.{query_params[1]} where date <= '{query_params[2][1]}')
-                order by balance desc
-                limit 50;
-            """).fetchall()
+        def fetch_top_holders(top_50_query):
+            return engine.cursor().execute(top_50_query).fetchall()
 
         # Display result table visualizations
         with st.expander("Result Tables", expanded=True):
@@ -71,7 +72,7 @@ def app():
                 # st.dataframe(df.sort_values(by='DATE').drop_duplicates('ADDRESS', keep='last').nlargest(50, 'BALANCE').reset_index(drop=True))
                 st.dataframe(
                     pd.DataFrame(
-                        fetch_top_holders(),
+                        fetch_top_holders(top_50_query),
                         columns=['Address', 'Balance']
                     )
                 )
