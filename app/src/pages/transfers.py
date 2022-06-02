@@ -1,8 +1,11 @@
 from enum import unique
 import streamlit as st
 import pandas as pd
+import snowflake.connector
 from ..utils.tokens.tkn_bal_txn_display import tkn_bal_txn_display
 from ..utils.tokens.tkn_bal_txn_fetch import fetch_data
+from ..config.sf import SNOWFLAKE_HOST, SNOWFLAKE_PASSWORD, SNOWFLAKE_ROLE, SNOWFLAKE_USERNAME, SNOWFLAKE_WAREHOUSE
+
 
 def app():
     """
@@ -26,30 +29,104 @@ def app():
             st.write('No results. Requery with new parameters.')
             st.stop()
 
-        # Generate analysis metrics
-        metrics = txn_analyzoor(df)
+        # # Generate analysis metrics
+
+        @st.experimental_singleton
+        def init_connection():
+            print()
+            print('Initializing DB connection...')
+            print()
+            return snowflake.connector.connect(
+                account=SNOWFLAKE_HOST,
+                user=SNOWFLAKE_USERNAME,
+                password=SNOWFLAKE_PASSWORD,
+                warehouse=SNOWFLAKE_WAREHOUSE,
+                role=SNOWFLAKE_ROLE,
+                port=443,
+                protocol='https'
+            )
+
+        engine = init_connection()
+        
+        ttq = engine.cursor().execute(f"""
+            SELECT count(*)
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}';
+            """).fetchone()[0]
+
+        adtq = engine.cursor().execute(f"""
+            select avg(sum_transfers)
+            from (SELECT date(timestamp), count(*) sum_transfers
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            group by  date(timestamp));
+        """).fetchone()[0]
+
+        ttv = engine.cursor().execute(f"""
+            SELECT sum(amount)
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}';
+        """).fetchone()[0]
+
+        adtv = engine.cursor().execute(f"""
+            select avg(sum_amount)
+            from (SELECT date(timestamp), sum(amount) sum_amount
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            group by  date(timestamp));
+        """).fetchone()[0]
+
+        tv = engine.cursor().execute(f"""
+            select timestamp, amount
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            order by timestamp;
+        """).fetchall()
+
+        tv = engine.cursor().execute(f"""
+            select timestamp, amount
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            order by timestamp;
+        """).fetchall()
+
+        tq = engine.cursor().execute(f"""
+            select timestamp, count(*)
+            FROM maker.transfers.{query_params[1]}
+            where date(timestamp) >= '{query_params[2][0]}'
+            and date(timestamp) <= '{query_params[2][1]}'
+            group by timestamp
+            order by timestamp;
+        """).fetchall()
 
         # Display result KPIs
         with st.expander("Result KPIs", expanded=True):
             # Display metrics in vertical columns
             with st.container():
+
                 # Create columns
                 quant_col1, quant_col2 = st.columns(2)
 
                 with quant_col1:
-                    st.metric(label="Total Transaction Quantity", value='{:,}'.format(metrics[0]))
+                    st.metric(label="Total Transaction Quantity", value='{:,}'.format(ttq))
                 
                 with quant_col2:
-                    st.metric(label="Average Daily Transaction Quantity", value='{:,}'.format(round(metrics[1])))
+                    st.metric(label="Average Daily Transaction Quantity", value='{:,}'.format(round(adtq)))
 
             with st.container():
                 vol_col1, vol_col2 = st.columns(2)
 
                 with vol_col1:
-                    st.metric(label=f"Total Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[2], 2)))
+                    st.metric(label=f"Total Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(ttv, 2)))
 
                 with vol_col2:
-                    st.metric(label=f"Average Daily Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(metrics[3], 2)))
+                    st.metric(label=f"Average Daily Transaction Volume (in {query_params[1]})", value='{:,}'.format(round(adtv, 2)))
 
         # Display result visualizations
         with st.expander("Result Visualizations", expanded=True):
@@ -58,7 +135,7 @@ def app():
                 st.markdown("Graph of daily transaction volume")
                 st.bar_chart(
                     pd.DataFrame(
-                        list(metrics[4].items()), 
+                        tv, 
                         columns=['Date','Transaction Volume']).set_index('Date')
                 )
 
@@ -66,7 +143,7 @@ def app():
                 st.markdown("Graph of daily transaction quantity")
                 st.bar_chart(
                     pd.DataFrame(
-                        list(metrics[5].items()), 
+                        tq, 
                         columns=['Date','Transaction Quantity']).set_index('Date')
                 )
 
@@ -76,32 +153,3 @@ def app():
                 # Display dataframe tables within container
                 st.markdown(f"Top 10 Transfers by {query_params[1]}")
                 st.dataframe(df.nlargest(10, 'AMOUNT').reset_index(drop=True))
-
-def txn_analyzoor(df: pd.DataFrame) -> tuple:
-    """
-    Function to generate metrics for Transfer Explorer
-
-    Params:
-        df (pd.DataFrame): DataFrame of raw txn data.
-    """
-
-    # Get count of unique dates
-    unique_dates = len(df.TIMESTAMP.apply(lambda x: x.date()).unique())
-    
-    # Transaction quantity
-    txquant_total = len(df)
-    txquant_daily_avg = txquant_total / unique_dates
-
-    # Transaction volume
-    txvol_total = sum(df.AMOUNT)
-    txvol_daily_avg = txvol_total / unique_dates
-
-    # Get dictionary of daily transaction volume
-    txvol_daily_df = df.resample('D', on='TIMESTAMP').sum().reset_index().drop(columns='BLOCK')
-    txvol_daily = dict(zip(txvol_daily_df.TIMESTAMP, txvol_daily_df.AMOUNT))
-    
-    # Get dictionary of daily transaction amount
-    txsum_daily_df = df[['TIMESTAMP', 'AMOUNT']].resample('D', on='TIMESTAMP').count().drop(columns='TIMESTAMP').reset_index()
-    txsum_daily =  dict(zip(txsum_daily_df.TIMESTAMP, txsum_daily_df.AMOUNT))
-
-    return txquant_total, txquant_daily_avg, txvol_total, txvol_daily_avg, txvol_daily, txsum_daily
