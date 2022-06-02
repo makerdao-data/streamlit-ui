@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
+import snowflake.connector
 from dateutil.relativedelta import relativedelta
 from datetime import datetime, timedelta
+from ...config.sf import SNOWFLAKE_HOST, SNOWFLAKE_PASSWORD, SNOWFLAKE_ROLE, SNOWFLAKE_USERNAME, SNOWFLAKE_WAREHOUSE
 
 def tkn_bal_txn_display(topic: str) -> tuple: 
     """
@@ -17,6 +19,23 @@ def tkn_bal_txn_display(topic: str) -> tuple:
         ('', 'MKR', 'DAI'),
          format_func=lambda x: 'Select an option' if x == '' else x
     )
+
+    @st.experimental_singleton
+    def init_connection():
+        print()
+        print('Initializing DB connection...')
+        print()
+        return snowflake.connector.connect(
+            account=SNOWFLAKE_HOST,
+            user=SNOWFLAKE_USERNAME,
+            password=SNOWFLAKE_PASSWORD,
+            warehouse=SNOWFLAKE_WAREHOUSE,
+            role=SNOWFLAKE_ROLE,
+            port=443,
+            protocol='https'
+        )
+
+    engine = init_connection()
 
     # Once token is selected...
     if token:
@@ -35,49 +54,77 @@ def tkn_bal_txn_display(topic: str) -> tuple:
 
                 # Min date selection
                 if token == 'DAI':
-                    start_date = datetime(2019, 11, 18)
-                    max_delta = 20
+
+                    max_date_query = f"""
+                        SELECT max(date(timestamp))
+                        FROM maker.transfers.{token};
+                    """
+                    @st.experimental_memo(ttl=600)
+                    def fetch_max_date(max_date_query):
+                        return engine.cursor().execute(max_date_query).fetchone()[0]
+
+                    max_value = fetch_max_date(max_date_query)
+                    min_value = max_value - timedelta(days=30)
+                    max_delta = 30
+
                 elif token == 'MKR':
-                    start_date = datetime(2017, 11, 25)
-                    max_delta = 50
+
+                    max_date_query = f"""
+                        SELECT max(date(timestamp))
+                        FROM maker.transfers.{token};
+                    """
+                    @st.experimental_memo(ttl=600)
+                    def fetch_max_date(max_date_query):
+                        return engine.cursor().execute(max_date_query).fetchone()[0]
+
+                    max_value = fetch_max_date(max_date_query)
+                    min_value = max_value - timedelta(days=30)
+                    max_delta = 30
 
                 # Date input with date range
                 date_input = st.date_input(
                     f'Select date range ({max_delta} day maximum):',
                     value=(
-                        (datetime.today() - relativedelta(weeks=1)).date(),
-                        datetime.today()
+                        (min_value, max_value)
                     ),
-                    max_value=datetime.today(),
-                    min_value=start_date
+                    max_value=max_value,
+                    min_value=min_value
                 )
                 
                 # Query conditionals
                 if len(date_input) == 2:
-                    if (date_input[1] - date_input[0]) < timedelta(days=max_delta):
+                    if (date_input[1] - date_input[0]) <= timedelta(days=max_delta):
                         if st.button('Query'):
                             # Return tuple of selected token and date parameters
                             return (topic, token, date_input)
 
             # If 'Block' is selected...
             if indexer == 'Block':
+
+                max_block_query = f"""
+                    SELECT max(block)
+                    FROM maker.transfers.{token};
+                """
+                @st.experimental_memo(ttl=600)
+                def fetch_max_block(max_block_query):
+                    return engine.cursor().execute(max_block_query).fetchone()[0]
                 
+                max_value = fetch_max_block(max_block_query)
+
                 # Block inputs
-                st.write("Maximum block range: 60,000.")
+                st.write("Maximum block range: 150,000.")
                 start_block_input = st.number_input(
                     'Select start block:',
-                    value=12000000
+                    value = max_value - 150000
                 )
                 end_block_input = st.number_input(
                     'Select end block:',
-                    value=15000000
+                    value = max_value
                 )
 
                 # Query conditionals
                 if start_block_input < end_block_input:
-                    if (end_block_input - start_block_input) < 60000:
+                    if (end_block_input - start_block_input) <= 150000:
                         if st.button('Query'):
                             # Return tuple of selected token and block parameters
                             return (topic, token, (start_block_input, end_block_input))
-        
-     

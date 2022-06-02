@@ -1,9 +1,7 @@
-from enum import unique
 import streamlit as st
 import pandas as pd
 import snowflake.connector
 from ..utils.tokens.tkn_bal_txn_display import tkn_bal_txn_display
-from ..utils.tokens.tkn_bal_txn_fetch import fetch_data
 from ..config.sf import SNOWFLAKE_HOST, SNOWFLAKE_PASSWORD, SNOWFLAKE_ROLE, SNOWFLAKE_USERNAME, SNOWFLAKE_WAREHOUSE
 
 
@@ -21,15 +19,16 @@ def app():
     # If query parameters were generated...
     if query_params:
 
-        # Generate query from parameters and fetch data
-        # df = fetch_data(*query_params)
-        
-        # # Stop and prompt re-querying if result dataframe is empty.
-        # if df.empty:
-        #     st.write('No results. Requery with new parameters.')
-        #     st.stop()
+        # Generate analysis metrics
 
-        # # Generate analysis metrics
+        if type(query_params[2][0]) == int:
+            cond = 'block'
+            c0 = query_params[2][0]
+            c1 = query_params[2][1]
+        else:
+            cond = 'timestamp'
+            c0 = query_params[2][0].__str__()[:10] + ' 00:00:00'
+            c1 = query_params[2][1].__str__()[:10] + ' 23:59:59'
 
         @st.experimental_singleton
         def init_connection():
@@ -51,8 +50,8 @@ def app():
         ttq_query = f"""
             SELECT count(*)
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}';
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}';
         """
         @st.experimental_memo(ttl=600)
         def fetch_ttq(ttq_query):
@@ -62,9 +61,9 @@ def app():
             select avg(sum_transfers)
             from (SELECT date(timestamp), count(*) sum_transfers
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
-            group by  date(timestamp));
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}'
+            group by date(timestamp));
         """
         @st.experimental_memo(ttl=600)
         def fetch_adtq(adtq_query):
@@ -73,8 +72,8 @@ def app():
         ttv_query = f"""
             SELECT sum(amount)
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}';
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}';
         """
         @st.experimental_memo(ttl=600)
         def fetch_ttv(ttv_query):
@@ -84,9 +83,9 @@ def app():
             select avg(sum_amount)
             from (SELECT date(timestamp), sum(amount) sum_amount
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
-            group by  date(timestamp));
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}'
+            group by date(timestamp));
         """
         @st.experimental_memo(ttl=600)
         def fetch_adtv(adtv_query):
@@ -95,8 +94,8 @@ def app():
         tv_query = f"""
             select timestamp, amount
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}'
             order by timestamp;
         """
         @st.experimental_memo(ttl=600)
@@ -106,8 +105,8 @@ def app():
         tq_query = f"""
             select timestamp, count(*)
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}'
             group by timestamp
             order by timestamp;
         """
@@ -118,8 +117,8 @@ def app():
         top_10_query = f"""
             select timestamp, block, tx_hash, sender, receiver, amount
             FROM maker.transfers.{query_params[1]}
-            where date(timestamp) >= '{query_params[2][0]}'
-            and date(timestamp) <= '{query_params[2][1]}'
+            where {cond} >= '{c0}'
+            and {cond} <= '{c1}'
             order by amount desc
             limit 10;
         """

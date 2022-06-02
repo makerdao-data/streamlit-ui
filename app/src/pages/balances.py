@@ -62,10 +62,6 @@ def app():
                 order by balance desc
                 limit 50;
             """).fetchall()
-        
-        top_holders = fetch_top_holders()
-
-        df = pd.DataFrame(top_holders)
 
         # Display result table visualizations
         with st.expander("Result Tables", expanded=True):
@@ -73,4 +69,9 @@ def app():
                 # Display dataframe tables within container
                 st.markdown(f"Top 50 {query_params[1]} holders")
                 # st.dataframe(df.sort_values(by='DATE').drop_duplicates('ADDRESS', keep='last').nlargest(50, 'BALANCE').reset_index(drop=True))
-                st.dataframe(df)
+                st.dataframe(
+                    pd.DataFrame(
+                        fetch_top_holders(),
+                        columns=['Address', 'Balance']
+                    )
+                )
